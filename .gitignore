@@ -1,0 +1,5 @@
+node_modules/
+port-models/
+example/
+*.swp
+npm-debug.log

@@ -1,0 +1,30 @@
+{
+  "name": "port",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "build": "browserify src/main.js -t [ babelify ] -s Port | uglifyjs -cm > dist/port.js",
+    "watch": "nodemon --watch src --ext vue,js,css,html --exec 'npm run build'",
+    "test": "tape test.js | faucet"
+  },
+  "author": "Anton Zemlyansky",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parse": "^4.6.1",
+    "file-saver": "^2.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.4.4",
+    "@babel/plugin-transform-runtime": "^7.4.4",
+    "@babel/preset-env": "^7.4.4",
+    "babelify": "^10.0.0",
+    "browserify": "^16.2.3",
+    "faucet": "0.0.1",
+    "nodemon": "^1.18.7",
+    "puppeteer": "^1.12.2",
+    "tape": "^4.9.1",
+    "uglify-es": "^3.3.10"
+  }
+}
