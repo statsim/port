@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "build": "browserify src/main.js -t [ babelify ] -s Port | uglifyjs -cm > dist/port.js",
-    "watch": "nodemon --watch src --ext vue,js,css,html --exec 'npm run build'",
+    "build-dev": "browserify src/main.js -t [ babelify ] -s Port > dist/port.js",
+    "watch": "nodemon --watch src --ext vue,js,css,html --exec 'npm run build-dev'",
     "test": "tape test.js | faucet"
   },
   "author": "Anton Zemlyansky",

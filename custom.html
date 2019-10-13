@@ -8,7 +8,37 @@
     <title>Port</title>
   </head>
   <body>
-    <div id="port-container"></div>
+    <div class="navbar-fixed">
+      <nav class="white z-depth-0">
+        <div class="nav-wrapper">
+          <div class="container">
+            <a class="logo black-text">port:</a>
+            <ul class="right">
+              <li><a class="waves-effect waves-light btn white black-text bordered" id="run"><span>▸</span>&nbsp;&nbsp;Run</a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div id="io-container" class="container" style="margin-top: 20px;">
+      <div class="row">
+        <div class="col s12" id="model"></div>
+        <div class="col s12 m6">
+          <h6>Inputs</h6>
+          <div class="card bordered">
+            <div class="card-content" id="inputs"></div>
+          </div>
+        </div>
+        <div class="col s12 m6">
+          <h6>Outputs</h6>
+          <div class="card bordered">
+            <div class="card-content" id="outputs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="txt-container" class="container" style="margin-top: 20px; display: none;">
       <div class="row">
         <div class="col s12">
@@ -67,18 +97,59 @@
     <script src="dist/materialize.min.js" type="text/javascript"></script>
     <script src="dist/port.js" type="text/javascript"></script>
     <script>
+
+      /*
+      var schema = {
+        model: {
+          url: 'http://localhost:8080/example/model.js',
+          container: 'array',
+          type: 'class',
+          name: 'DecisionTreeClassifier',
+          method: 'predict'
+        },
+        inputs: [
+          {
+            type: 'int',
+            name: 'alpha'
+          },
+          {
+            type: 'string',
+            name: 'beta'
+          },
+          {
+            type: 'categorical',
+            values: ['One', 'Two', 'Three'],
+            name: 'Test categorical'
+           }
+        ],
+        outputs: [
+          {
+            type: 'categorical',
+            values: ['A', 'B', 'C', 'D']
+          }
+        ]
+      }
+      */
+
       var params = new URLSearchParams(window.location.search)
       var schema = params.get('s')
+
       if (schema) {
         if (typeof schema === 'string') {
           schema = schema.includes('/') ? schema : '/port-models/' + schema + '/schema.json'
         }
         var port = new Port({
-          portContainer: document.getElementById('port-container'),
+          inputsContainer: document.getElementById('inputs'),
+          outputsContainer: document.getElementById('outputs'),
+          modelContainer: document.getElementById('model'),
           schema: schema
         })
+        document.getElementById('run').onclick = function () {
+          port.run()
+        }
       } else {
-        document.getElementById('port-container').style.display = 'none'
+        document.getElementById('run').style.display = 'none'
+        document.getElementById('io-container').style.display = 'none'
         document.getElementById('txt-container').style.display = 'block'
       }
     </script>

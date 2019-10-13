@@ -1,13 +1,24 @@
 const parseCSV = require('csv-parse/lib/sync')
 const FileSaver = require('file-saver')
+const templates = require('./templates')
 
 const fetch = window['fetch']
 const Blob = window['Blob']
 const Worker = window['Worker']
 const FileReader = window['FileReader']
 
+// Deep clone a simple object
 function clone (obj) {
   return JSON.parse(JSON.stringify(obj))
+}
+
+// Create a dom element from string
+// https://stackoverflow.com/questions/494143/creating-a-new-dom-element-from-an-html-string-using-built-in-dom-methods-or-pro/35385518#35385518
+function htmlToElement (html) {
+  let template = document.createElement('template')
+  html = html.trim()
+  template.innerHTML = html
+  return template.content.firstChild
 }
 
 class InputElement {
@@ -172,12 +183,10 @@ class FileElement {
 
 class Port {
   constructor (params) {
-    console.log('[Port] Params: ', params)
+    console.log('[Port] Initializing Port with params: ', params)
+    this.params = params
 
-    this.inputsContainer = params.inputsContainer
-    this.outputsContainer = params.outputsContainer
-    this.modelContainer = params.modelContainer
-
+    // Get schema then run init
     if (params.schema) {
       if (typeof params.schema === 'object') {
         console.log('[Port] Received schema as object: ', params.schema)
@@ -201,7 +210,27 @@ class Port {
   init (schema) {
     this.schema = clone(schema)
 
-    console.log('[Port] Initialization')
+    if (this.params.portContainer) {
+      console.log('[Port] Init port element')
+      // Get layout name
+      const layout = (this.schema.design && this.schema.design.layout) ? this.schema.design.layout : 'blocks'
+      const portElement = htmlToElement(templates[layout])
+      this.params.portContainer.appendChild(portElement)
+      // Get input, output and model containers
+      this.inputsContainer = portElement.querySelector('#inputs')
+      this.outputsContainer = portElement.querySelector('#outputs')
+      this.modelContainer = portElement.querySelector('#model')
+      // Make run button active
+      portElement.querySelector('#run').onclick = () => {
+        this.run()
+      }
+    } else {
+      this.inputsContainer = this.params.inputsContainer
+      this.outputsContainer = this.params.outputsContainer
+      this.modelContainer = this.params.modelContainer
+    }
+
+    console.log('[Port] Init inputs, outputs and model description')
 
     // Update model URL if needed
     if (this.schema.model.url && !this.schema.model.url.includes('/') && this.schemaUrl.includes('/')) {
@@ -213,7 +242,7 @@ class Port {
     // Iniitialize model information
     if (this.modelContainer && this.schema.model) {
       let h = document.createElement('h4')
-      h.innerText = this.schema.model.name
+      h.innerText = this.schema.model.title || this.schema.model.name
       this.modelContainer.appendChild(h)
       let desc = document.createElement('p')
       desc.className = 'model-info'
@@ -263,7 +292,7 @@ class Port {
     window['M'].FormSelect.init(selectElements, {})
 
     // Init Model
-    if (this.schema.model.type === 'function' || this.schema.model.type === 'class' || this.schema.model.type === 'py') {
+    if (['function', 'class', 'py', 'async-init', 'async-function'].includes(this.schema.model.type)) {
       // Initialize worker with the model
       if (this.schema.model.type === 'py') {
         // Add loading indicator
@@ -342,6 +371,8 @@ class Port {
       case 'py':
       case 'class':
       case 'function':
+      case 'async-init':
+      case 'async-function':
         this.worker.postMessage(inputValues)
         break
       case 'api':

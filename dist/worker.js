@@ -9,6 +9,13 @@ onmessage = function (e) {
       INIT MESSAGE
     */
     let model = data
+
+    if (model.dom) {
+      console.log('[Worker] Loading jsdom')
+      importScripts('jsdom.min.js')
+      this.document = this.jsdom.JSDOM(`<!DOCTYPE html>`).window.document
+    }
+
     if (model.type === 'py') {
       // Python with Pyodide
       importScripts('https://pyodide.cdn.iodide.io/pyodide.js')
@@ -39,25 +46,31 @@ onmessage = function (e) {
     } else {
       // Javascript
       this.container = model.container || 'args'
-      console.log('[Worker] Load script')
+      console.log('[Worker] Load script: ', model.url)
       importScripts(model.url)
       if (model.type === 'class') {
         console.log('[Worker] Init class')
         this.model = (new this[model.name]())[model.method || 'predict']
+      } else if (model.type === 'async-init') {
+        console.log('[Worker] Init function with promise')
+        console.log(this[model.name])
+        this[model.name]().then((m) => {
+          console.log('[Worker] Async init resolved: ', m)
+          this.model = m
+        })
       } else {
         console.log('[Worker] Init function')
-        this.model = this[data.name]
+        this.model = this[model.name]
       }
     }
   } else {
     /*
       CALL MESSAGE
     */
-    console.log('[Worker] Calling the model')
     var res
     if (typeof this.model === 'string') {
-      // Python
-      console.log('[Worker] Running the python script')
+      // Python model:
+      console.log('[Worker] Calling Python model')
       const keys = Object.keys(data)
       for (let key of keys) {
         self[key] = data[key];
@@ -70,15 +83,20 @@ onmessage = function (e) {
         .catch((err) => {
           // self.postMessage({error : err.message});
         })
-    } else if (this.container === 'args') {
-      // JS args
-      console.log('[Worker] Applying inputs as arguments')
-      res = this.model.apply(null, data)
-      postMessage(res)
     } else {
-      // JS object or array
-      res = this.model(data)
-      postMessage(res)
+      // JavaScript model
+      console.log('[Worker] Calling JavaScript model')
+      if (this.container === 'args') {
+        console.log('[Worker] Applying inputs as arguments')
+        res = this.model.apply(null, data)
+      } else {
+        // JS object or array
+        console.log('[Worker] Applying inputs as object/array')
+        res = this.model(data)
+      }
+      // Return promise value or just regular value
+      // Promise.resolve handles both cases
+      Promise.resolve(res).then(r => { postMessage(r) })
     }
   }
 }
