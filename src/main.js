@@ -384,17 +384,33 @@ class Port {
     console.log('[Port] Show output: ', value, output)
     switch (output.type) {
       case 'file':
-        const blob = new Blob([value], {type: 'text/plain;charset=utf-8'})
+        let fileBlob = new Blob([value], {type: 'text/plain;charset=utf-8'})
         let a = document.createElement('a')
         a.className = 'waves-effect waves-light btn'
         a.innerText = 'Download'
         a.onclick = () => {
-          FileSaver.saveAs(blob, output.filename || 'output')
+          FileSaver.saveAs(fileBlob, output.filename || 'output')
         }
         this.outputsContainer.appendChild(a)
         break
+      case 'svg':
+        // Append svg element
+        let svgContainer = document.createElement('div')
+        svgContainer.innerHTML = value
+        this.outputsContainer.appendChild(svgContainer)
+
+        // Append download button
+        let svgBlob = new Blob([value], {type: 'text/plain;charset=utf-8'})
+        let svgDownloadButton = document.createElement('a')
+        svgDownloadButton.className = 'waves-effect waves-light btn'
+        svgDownloadButton.innerText = 'Download'
+        svgDownloadButton.onclick = () => {
+          FileSaver.saveAs(svgBlob, 'code.svg')
+        }
+        this.outputsContainer.appendChild(svgDownloadButton)
+        break
       default:
-        let collection = document.createElement('li')
+        let collection = document.createElement('ul')
         collection.className = 'collection'
 
         let collectionItem = document.createElement('li')
