@@ -186,7 +186,7 @@ class Port {
     console.log('[Port] Initializing Port with params: ', params)
     this.params = params
 
-    // Get schema then run init
+    // Get schema then initialize a model
     if (params.schema) {
       if (typeof params.schema === 'object') {
         console.log('[Port] Received schema as object: ', params.schema)
@@ -207,6 +207,7 @@ class Port {
     }
   }
 
+  // Initialize model from schema
   init (schema) {
     this.schema = clone(schema)
 
@@ -239,7 +240,7 @@ class Port {
       console.log('[Port] Changed the old model URL to absolute one:', oldModelUrl, this.schema.model.url)
     }
 
-    // Iniitialize model information
+    // Iniitialize model description
     if (this.modelContainer && this.schema.model) {
       let h = document.createElement('h4')
       h.innerText = this.schema.model.title || this.schema.model.name
@@ -292,30 +293,62 @@ class Port {
     window['M'].FormSelect.init(selectElements, {})
 
     // Init Model
-    if (['function', 'class', 'py', 'async-init', 'async-function'].includes(this.schema.model.type)) {
-      // Initialize worker with the model
-      if (this.schema.model.type === 'py') {
-        // Add loading indicator
-        var overlay = document.createElement('div')
-        overlay.id = 'overlay'
-        overlay.className = 'valign-wrapper'
-        overlay.innerHTML = `
-          <div class="center-align" style="width:100%">
-            <div class="preloader-wrapper small active">
-              <div class="spinner-layer spinner-green-only">
-                <div class="circle-clipper left">
-                  <div class="circle"></div>
-                </div><div class="gap-patch">
-                  <div class="circle"></div>
-                </div><div class="circle-clipper right">
-                  <div class="circle"></div>
-                </div>
+    if (this.schema.model.type === 'py') {
+      // Add loading indicator
+      var overlay = document.createElement('div')
+      overlay.id = 'overlay'
+      overlay.className = 'valign-wrapper'
+      overlay.innerHTML = `
+        <div class="center-align" style="width:100%">
+          <div class="preloader-wrapper small active">
+            <div class="spinner-layer spinner-green-only">
+              <div class="circle-clipper left">
+                <div class="circle"></div>
+              </div><div class="gap-patch">
+                <div class="circle"></div>
+              </div><div class="circle-clipper right">
+                <div class="circle"></div>
               </div>
             </div>
           </div>
-        `
-        this.inputsContainer.appendChild(overlay)
+        </div>
+      `
+      this.inputsContainer.appendChild(overlay)
+
+      let script = document.createElement('script')
+      script.src = 'https://pyodide.cdn.iodide.io/pyodide.js'
+      script.onload = () => {
+        window['M'].toast({html: 'Loaded: Main framework'})
+        window['languagePluginLoader'].then(() => {
+          fetch(this.schema.model.url)
+            .then(res => res.text())
+            .then(res => {
+              console.log('[Port] Loaded python code:', res)
+              this.pymodel = res
+              // Here we filter only import part to know load python libs
+              let imports = res.split('\n').filter(str => (str.includes('import')) && !(str.includes(' js '))).join('\n')
+              console.log('Imports: ', imports)
+              window['pyodide'].runPythonAsync(imports, () => {})
+                .then((res) => {
+                  window['M'].toast({html: 'Loaded: Libs'})
+                  this.inputsContainer.removeChild(overlay)
+                })
+                .catch((err) => {
+                  console.log(err)
+                  window['M'].toast({html: 'Error loading libs'})
+                  this.inputsContainer.removeChild(overlay)
+                })
+            })
+            .catch((err) => {
+              console.log(err)
+              window['M'].toast({html: 'Error loading python code'})
+              this.inputsContainer.removeChild(overlay)
+            })
+        })
       }
+      document.head.appendChild(script)
+    } else if (['function', 'class', 'async-init', 'async-function'].includes(this.schema.model.type)) {
+      // Initialize worker with the model
       this.worker = new Worker('dist/worker.js')
       this.worker.postMessage(this.schema.model)
       this.worker.onmessage = (e) => {
@@ -337,7 +370,7 @@ class Port {
       }
     } else if (this.schema.model.type === 'tf') {
       // Initialize TF
-      const script = document.createElement('script')
+      let script = document.createElement('script')
       script.src = 'dist/tf.min.js'
       script.onload = () => {
         console.log('[Port] Loaded TF.js')
@@ -369,6 +402,25 @@ class Port {
       case 'tf':
         break
       case 'py':
+        /*
+        const keys = Object.keys(inputValues)
+        for (let key of keys) {
+          window[key] = inputValues[key]
+        }
+        */
+        window['inputs'] = inputValues
+        window['pyodide'].runPythonAsync(this.pymodel, () => {})
+          .then((res) => {
+            this.output(res)
+            // console.log(res)
+            // window['M'].toast({html: 'Model and libs loaded'})
+          })
+          .catch((err) => {
+            console.log(err)
+            window['M'].toast({html: 'Error in code'})
+          })
+        break
+
       case 'class':
       case 'function':
       case 'async-init':
