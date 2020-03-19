@@ -4,7 +4,7 @@ const templates = require('./templates')
 
 const fetch = window['fetch']
 const Blob = window['Blob']
-const Worker = window['Worker']
+// const Worker = window['Worker']
 const FileReader = window['FileReader']
 
 // Deep clone a simple object
@@ -28,6 +28,7 @@ class InputElement {
     wrapper.className = 'input-field'
 
     let inputElement = document.createElement('input')
+    inputElement.id = name
 
     switch (input.type) {
       case 'int':
@@ -75,6 +76,7 @@ class TextareaElement {
     let textareaElement = document.createElement('textarea')
     textareaElement.className = 'materialize-textarea'
     textareaElement.rows = 5
+    textareaElement.id = name
 
     let labelElement = document.createElement('label')
     labelElement.innerText = name
@@ -99,13 +101,16 @@ class SelectElement {
 
     let selectElement = document.createElement('select')
     selectElement.className = 'browser-default'
+    selectElement.id = name
 
-    input.values.forEach((val, i) => {
-      let optionElement = document.createElement('option')
-      optionElement.value = i
-      optionElement.innerText = val
-      selectElement.appendChild(optionElement)
-    })
+    if (input.values && input.values.length) {
+      input.values.forEach((val, i) => {
+        let optionElement = document.createElement('option')
+        optionElement.value = i
+        optionElement.innerText = val
+        selectElement.appendChild(optionElement)
+      })
+    }
 
     let labelElement = document.createElement('label')
     labelElement.className = 'active'
@@ -144,12 +149,16 @@ class FileElement {
     let inputElement = document.createElement('input')
     inputElement.type = 'file'
     inputElement.addEventListener('change', (e) => {
+      console.log('[File input] Change event')
       const reader = new FileReader()
       this.file = e.target.files[0]
       window['readertmp'] = reader
       reader.readAsText(this.file)
       reader.onload = () => {
         this.value = reader.result
+        if (typeof this.cb !== 'undefined') {
+          this.cb.run()
+        }
       }
       console.log('[Port] Loaded new file: ', this.file.name, this.file.size)
     }, false)
@@ -181,6 +190,79 @@ class FileElement {
   }
 }
 
+class ImageElement {
+  constructor (input) {
+    console.log('[Port] Input object: ', input)
+
+    this.value = null
+    this.file = null
+    this.width = input.width || 300
+    this.height = input.height || 300
+
+    let wrapper = document.createElement('div')
+    wrapper.className = 'file-field input-field'
+
+    let canvas = document.createElement('canvas')
+    canvas.width = '' + this.width
+    canvas.height = '' + this.height
+    wrapper.appendChild(canvas)
+    this.canvas = canvas
+
+    let context = canvas.getContext('2d')
+    let img = new window['Image']()
+    this.context = context
+
+    let btnElement = document.createElement('div')
+    btnElement.className = 'btn'
+
+    let spanElement = document.createElement('span')
+    spanElement.innerText = 'File'
+    btnElement.appendChild(spanElement)
+
+    let inputElement = document.createElement('input')
+    inputElement.type = 'file'
+    inputElement.addEventListener('change', (e) => {
+      console.log('[Image input] Change event')
+      const reader = new FileReader()
+      this.file = e.target.files[0]
+      reader.readAsDataURL(this.file)
+      reader.onload = (evt) => {
+        if (evt.target.readyState === FileReader.DONE) {
+          img.src = evt.target.result
+          img.onload = () => {
+            context.clearRect(0, 0, this.width, this.height)
+            context.drawImage(img, 0, 0, this.width, this.height * img.height / img.width)
+            if (typeof this.cb !== 'undefined') {
+              this.cb.run()
+            }
+          }
+        }
+      }
+      console.log('[Port] Loaded new file: ', this.file.name, this.file.size)
+    }, false)
+    btnElement.appendChild(inputElement)
+
+    let wrapperElement = document.createElement('div')
+    wrapperElement.className = 'file-path-wrapper'
+
+    let textInputElement = document.createElement('input')
+    textInputElement.type = 'text'
+    textInputElement.className = 'file-path validate'
+    wrapperElement.appendChild(textInputElement)
+
+    wrapper.appendChild(btnElement)
+    wrapper.appendChild(wrapperElement)
+
+    this.inputElement = inputElement
+    this.element = wrapper
+  }
+
+  getValue () {
+    return this.context.getImageData(0, 0, this.width, this.height)
+    // return this.canvas
+  }
+}
+
 class Port {
   constructor (params) {
     console.log('[Port] Initializing Port with params: ', params)
@@ -209,6 +291,19 @@ class Port {
 
   // Initialize model from schema
   init (schema) {
+    console.log('[Port] Initializing schema')
+
+    // Convert JS code to string
+    if (schema.model.code && (typeof schema.model.code !== 'string')) {
+      console.log('[Port] Convert code in schema to string')
+      schema.model.code = schema.model.code.toString()
+    }
+
+    // Check for worker flag
+    if (typeof schema.model.worker === 'undefined') {
+      schema.model.worker = true
+    }
+
     this.schema = clone(schema)
 
     if (this.params.portContainer) {
@@ -234,9 +329,10 @@ class Port {
     console.log('[Port] Init inputs, outputs and model description')
 
     // Update model URL if needed
-    if (this.schema.model.url && !this.schema.model.url.includes('/') && this.schemaUrl.includes('/')) {
+    if (this.schema.model.url && !this.schema.model.url.includes('/') && this.schemaUrl && this.schemaUrl.includes('/')) {
       let oldModelUrl = this.schema.model.url
-      this.schema.model.url = this.schemaUrl.split('/').slice(0, -1).join('/') + '/' + oldModelUrl
+      console.log(this.schemaUrl)
+      this.schema.model.url = window.location.protocol + '//' + window.location.host + this.schemaUrl.split('/').slice(0, -1).join('/') + '/' + oldModelUrl
       console.log('[Port] Changed the old model URL to absolute one:', oldModelUrl, this.schema.model.url)
     }
 
@@ -270,17 +366,26 @@ class Port {
         case 'text':
           element = new TextareaElement(input)
           break
+        case 'select':
         case 'categorical':
           element = new SelectElement(input)
           break
         case 'file':
           element = new FileElement(input)
           break
+        case 'image':
+          element = new ImageElement(input)
+          break
       }
       // Add onchange listener to original input element if model has autorun flag
-      if (this.schema.model.autorun) {
-        element.inputElement.onchange = () => {
-          this.run()
+      if (this.schema.model.autorun || input.reactive) {
+        if (input.type === 'file') {
+          element.cb = this
+        } else {
+          element.inputElement.onchange = () => {
+            console.log('[Input] Change event')
+            this.run()
+          }
         }
       }
       // Add element to input object
@@ -326,7 +431,7 @@ class Port {
               console.log('[Port] Loaded python code:', res)
               this.pymodel = res
               // Here we filter only import part to know load python libs
-              let imports = res.split('\n').filter(str => (str.includes('import')) && !(str.includes(' js '))).join('\n')
+              let imports = res.split('\n').filter(str => (str.includes('import ')) && !(str.includes('#')) && !(str.includes(' js '))).join('\n')
               console.log('Imports: ', imports)
               window['pyodide'].runPythonAsync(imports, () => {})
                 .then((res) => {
@@ -349,24 +454,71 @@ class Port {
       document.head.appendChild(script)
     } else if (['function', 'class', 'async-init', 'async-function'].includes(this.schema.model.type)) {
       // Initialize worker with the model
-      this.worker = new Worker('dist/worker.js')
-      this.worker.postMessage(this.schema.model)
-      this.worker.onmessage = (e) => {
-        const data = e.data
-        console.log('[Port] Response from worker:', data)
-        if ((typeof data === 'object') && (data._status)) {
-          switch (data._status) {
-            case 'loaded':
-              window['M'].toast({html: 'Model and libs loaded'})
-              this.inputsContainer.removeChild(overlay)
-              break
-          }
+      if (this.schema.model.worker) {
+        this.worker = new Worker('./worker.js')
+        console.log(this.schema.model.code)
+
+        if (this.schema.model.url) {
+          fetch(this.schema.model.url)
+            .then(res => res.text())
+            .then(res => {
+              console.log('[Port] Loaded js code:', res)
+              this.schema.model.code = res
+              console.log(this.schema.model.code)
+              this.worker.postMessage(this.schema.model)
+            })
+        } else if (typeof this.schema.model.code !== 'undefined') {
+          console.log(this.schema.model.code)
+          this.worker.postMessage(this.schema.model)
         } else {
-          this.output(data)
+          window['M'].toast({html: 'Error. No code provided'})
         }
-      }
-      this.worker.onerror = () => {
-        console.log('[Port] Error from worker')
+
+        this.worker.onmessage = (e) => {
+          const data = e.data
+          console.log('[Port] Response from worker:', data)
+          if ((typeof data === 'object') && (data._status)) {
+            switch (data._status) {
+              case 'loaded':
+                window['M'].toast({html: 'Loaded: JS model (in worker)'})
+                this.inputsContainer.removeChild(overlay)
+                break
+            }
+          } else {
+            this.output(data)
+          }
+        }
+        this.worker.onerror = () => {
+          console.log('[Port] Error from worker')
+        }
+      } else {
+        // Initialize model in main window
+        console.log('[Port] Init model in window')
+        let script = document.createElement('script')
+        script.src = this.schema.model.url
+        script.onload = () => {
+          window['M'].toast({html: 'Loaded: JS model'})
+          console.log('[Port] Loaded JS model in main window')
+
+          // Initializing the model (same in worker)
+          if (this.schema.model.type === 'class') {
+            console.log('[Port] Init class')
+            const modelClass = new window[this.schema.model.name]()
+            this.modelFunc = (...a) => {
+              return modelClass[this.schema.model.method || 'predict'](...a)
+            }
+          } else if (this.schema.model.type === 'async-init') {
+            console.log('[Port] Init function with promise')
+            window[this.schema.model.name]().then((m) => {
+              console.log('[Port] Async init resolved: ', m)
+              this.modelFunc = m
+            })
+          } else {
+            console.log('[Port] Init function')
+            this.modelFunc = window[this.schema.model.name]
+          }
+        }
+        document.head.appendChild(script)
       }
     } else if (this.schema.model.type === 'tf') {
       // Initialize TF
@@ -389,7 +541,9 @@ class Port {
     if (schema.model && schema.model.container && schema.model.container === 'object') {
       inputValues = {}
       schema.inputs.forEach(input => {
-        inputValues[input.name] = input.element.getValue()
+        if (input.element) {
+          inputValues[input.name] = input.element.getValue()
+        }
       })
     } else {
       inputValues = schema.inputs.map(input => {
@@ -425,7 +579,20 @@ class Port {
       case 'function':
       case 'async-init':
       case 'async-function':
-        this.worker.postMessage(inputValues)
+        if (this.schema.model.worker) {
+          this.worker.postMessage(inputValues)
+        } else {
+          // Run in main window
+          var res
+          if (this.schema.model.container === 'args') {
+            res = this.modelFunc.apply(null, inputValues)
+          } else {
+            console.log('[Port] Applying inputs as object/array')
+            res = this.modelFunc(inputValues)
+          }
+          console.log('[Port] modelFunc results:', res)
+          Promise.resolve(res).then(r => { this.output(r) })
+        }
         break
       case 'api':
         break
@@ -484,11 +651,14 @@ class Port {
   output (data) {
     // const blob = new Blob([file], { type: type || 'application/*' });
     // const file = window.URL.createObjectURL(blob)
-    console.log('[Port] Got results from worker', typeof data)
+    console.log('[Port] Got output results of type:', typeof data)
+    console.log(data)
 
     this.outputsContainer.innerHTML = ''
 
-    if (this.schema.outputs && this.schema.outputs.length) {
+    // TODO: Think about all edge cases
+    // * No output field, but reactivity
+    if ((this.schema.outputs && this.schema.outputs.length) /* || (typeof data === 'object') */) {
       if (Array.isArray(data)) {
         let arrData
         if (data.length === this.schema.outputs.length) {
@@ -504,13 +674,56 @@ class Port {
           this._showOutput(data, this.schema.outputs[0])
         }
       } else if (typeof data === 'object') {
-        this.schema.outputs.forEach((output, i) => {
-          if (output.name && data[output.name]) {
-            this._showOutput(data[output.name], output)
-          } else {
-            this._showOutput(data[Object.keys(data)[i]], output)
+        let updatedSomething = false
+        if (this.schema.outputs) {
+          this.schema.outputs.forEach((output, i) => {
+            if (output.name && (typeof data[output.name] !== 'undefined')) {
+              console.log('[Port] Show output: ', output.name)
+              this._showOutput(data[output.name], output)
+              updatedSomething = true
+            }
+            //else {
+            //  this._showOutput(data[Object.keys(data)[i]], output)
+            //}
+          })
+        }
+
+        this.schema.inputs.forEach((input, i) => {
+          console.log(input.name, data[input.name])
+          if (input.name && (typeof data[input.name] !== 'undefined')) {
+            console.log('[Port] Update input: ', input.name)
+            const el = document.getElementById(input.name)
+            const d = data[input.name]
+            if (typeof d === 'object') {
+              Object.keys(d).forEach(k => {
+                if (k === 'options') {
+                  while (el.length) {
+                    el.remove(el.length - 1)
+                  }
+                  d[k].forEach(o => {
+                    const option = document.createElement('option')
+                    option.text = o
+                    el.add(option)
+                  })
+                } else {
+                  el[k] = d[k]
+                }
+              })
+            } else {
+              document.getElementById(input.name).value = d
+            }
+            // Fix labels stuck on top of inputs
+            // https://stackoverflow.com/questions/54206131/changing-the-value-of-html-input-tag
+            window['M'].updateTextFields()
+            updatedSomething = true
           }
         })
+
+        if (!updatedSomething) {
+          let pre = document.createElement('pre')
+          pre.innerText = JSON.stringify(data, null, 2)
+          this.outputsContainer.appendChild(pre)
+        }
       } else {
         this._showOutput(data, this.schema.outputs[0])
       }
