@@ -122,6 +122,9 @@ class Port {
         case 'string':
           element = new elements.InputElement(input)
           break
+        case 'checkbox':
+          element = new elements.CheckboxElement(input)
+          break
         case 'range':
           element = new elements.RangeElement(input)
           window['M'].Range.init(element.inputElement)

@@ -76,6 +76,36 @@ class RangeElement {
   }
 }
 
+class CheckboxElement {
+  constructor (input) {
+    let name = input.name || 'Input'
+
+    let wrapper = document.createElement('div')
+    let labelElement = document.createElement('label')
+
+    let inputElement = document.createElement('input')
+    inputElement.id = name
+    inputElement.type = 'checkbox'
+    inputElement.className = 'filled-in'
+
+    let spanElement = document.createElement('span')
+    spanElement.innerText = input.name
+
+    labelElement.appendChild(inputElement)
+    labelElement.appendChild(spanElement)
+
+    wrapper.appendChild(labelElement)
+
+    this.type = input.type
+    this.inputElement = inputElement
+    this.element = wrapper
+  }
+
+  getValue () {
+    return this.inputElement.checked
+  }
+}
+
 class TextareaElement {
   constructor (input) {
     let name = input.name || 'Input'
@@ -274,6 +304,7 @@ class ImageElement {
 
 module.exports = {
   InputElement,
+  CheckboxElement,
   RangeElement,
   TextareaElement,
   SelectElement,
