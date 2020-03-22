@@ -69,6 +69,23 @@ p.model-info {
   background: #ffffffdd;
 }
 
+.row .port-sidebar {
+  background-color: #F5F5F5;
+  border-radius: 5px;
+  padding-bottom: 15px;
+}
+
+.port-copy {
+  padding: 0 .75rem;
+  text-align: right;
+  opacity: 1;
+  font-weight: 300;
+}
+
+.port-copy p {
+  margin: 5px;
+}
+
 @media only screen and (max-width: 860px) {
   nav.white {
     background-color: #F5F5F5 !important;
