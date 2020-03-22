@@ -1,4 +1,4 @@
-const parseCSV = require('csv-parse/lib/sync')
+// const parseCSV = require('csv-parse/lib/sync')
 const FileReader = window['FileReader']
 
 class InputElement {
@@ -219,12 +219,14 @@ class FileElement {
   }
 
   getValue () {
+    /*
     if (this.parse) {
       return parseCSV(this.value, {
         // columns: true,
         skip_empty_lines: true
       })
     }
+    */
     return this.value
   }
 }
