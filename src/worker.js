@@ -47,11 +47,11 @@ onmessage = function (e) {
 
       if (model.type === 'class') {
         console.log('[Worker] Init class')
-        this.modelFunc = (new this[model.name]())[model.method || 'predict']
+        // this.modelFunc = (new this[model.name]())[model.method || 'predict']
 
         const modelClass = new this[model.name]()
-        this.modelFunc = () => {
-          return modelClass[model.method || 'predict']()
+        this.modelFunc = (...a) => {
+          return modelClass[model.method || 'predict'](...a)
         }
       } else if (model.type === 'async-init') {
         console.log('[Worker] Init function with promise')
