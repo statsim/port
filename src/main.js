@@ -97,19 +97,21 @@ class Port {
 
     // Iniitialize model description
     if (this.modelContainer && this.schema.model) {
-      let h = document.createElement('h4')
-      h.innerText = this.schema.model.title || this.schema.model.name
-      this.modelContainer.appendChild(h)
-      let desc = document.createElement('p')
-      desc.className = 'model-info'
-      if (this.schema.model.description) {
-        desc.innerText = this.schema.model.description + ' '
+      if (this.schema.model.title) {
+        let h = document.createElement('h4')
+        h.innerText = this.schema.model.title
+        this.modelContainer.appendChild(h)
       }
-      let a = document.createElement('a')
-      a.innerText = '→'
-      a.href = this.schema.model.url
-      desc.appendChild(a)
-      this.modelContainer.appendChild(desc)
+      if (this.schema.model.description) {
+        let desc = document.createElement('p')
+        desc.className = 'model-info'
+        desc.innerText = this.schema.model.description + ' '
+        let a = document.createElement('a')
+        a.innerText = '→'
+        a.href = this.schema.model.url
+        desc.appendChild(a)
+        this.modelContainer.appendChild(desc)
+      }
     }
 
     // Initialize inputs
@@ -223,19 +225,16 @@ class Port {
       // Initialize worker with the model
       if (this.schema.model.worker) {
         this.worker = new Worker('./worker.js')
-        console.log(this.schema.model.code)
 
         if (this.schema.model.url) {
           fetch(this.schema.model.url)
             .then(res => res.text())
             .then(res => {
-              console.log('[Port] Loaded js code:', res)
+              console.log('[Port] Loaded js code')
               this.schema.model.code = res
-              console.log(this.schema.model.code)
               this.worker.postMessage(this.schema.model)
             })
         } else if (typeof this.schema.model.code !== 'undefined') {
-          console.log(this.schema.model.code)
           this.worker.postMessage(this.schema.model)
         } else {
           window['M'].toast({html: 'Error. No code provided'})
