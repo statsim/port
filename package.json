@@ -1,13 +1,17 @@
 {
   "name": "port",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "index.js",
   "private": true,
   "scripts": {
-    "build": "browserify src/main.js -t [ babelify ] -s Port | uglifyjs -cm > dist/port.js",
-    "build-dev": "browserify src/main.js -t [ babelify ] -s Port > dist/port.js",
-    "watch": "nodemon --watch src --ext vue,js,css,html --exec 'npm run build-dev'",
+    "build-worker-dev": "browserify src/worker.js -t [ babelify ] > src/worker-temp.js",
+    "build-worker": "browserify src/worker.js -t [ babelify ] | uglifyjs -m -c drop_console=true > src/worker-temp.js",
+    "build-main-dev": "browserify src/main.js -t [ babelify ] -t workerify -s Port > dist/port.js",
+    "build-main": "browserify src/main.js -t [ babelify ] -t workerify -s Port | uglifyjs -m -c drop_console=true > dist/port.js",
+    "build-dev": "npm run build-worker-dev && npm run build-main-dev",
+    "build": "npm run build-worker && npm run build-main && rm src/worker-temp.js",
+    "watch": "nodemon --watch src --ignore worker-temp.js --ext vue,js,css,html --exec 'npm run build-dev'",
     "test": "tape test.js | faucet"
   },
   "author": "Anton Zemlyansky",
@@ -25,7 +29,9 @@
     "faucet": "0.0.1",
     "nodemon": "^1.18.7",
     "puppeteer": "^1.12.2",
+    "stripify": "^6.0.0",
     "tape": "^4.9.1",
-    "uglify-es": "^3.3.10"
+    "uglify-es": "^3.3.10",
+    "workerify": "^1.1.0"
   }
 }

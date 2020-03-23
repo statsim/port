@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
     <link type="text/css" rel="stylesheet" href="css/port.css" media="screen"/>
+    <link rel="icon" type="image/png" href="images/favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="images/favicon-16x16.png" sizes="16x16" />
     <title>Port</title>
   </head>
   <body>
@@ -19,10 +21,13 @@
     <div id="txt-container" class="container" style="margin-top: 20px; display: none;">
       <div class="row">
         <div class="col s12">
-          <h4>UI wrapper for functions, ML models and APIs</h4>
+          <h4>Visual interface for functions, machine learning models and APIs</h4>
           <p>
-            Port is an experimental lib based on the idea of declarative interface design.
-            Instead of writing front-end code, model designers and developers could focus on more important tasks specifying UI in a JSON schema.
+            <b>Port</b> is an experimental JavaScript library that simplifies porting algorithms to web browsers.
+            It's based on the idea of declarative interface design and reactivity.
+            Instead of writing "glue" front-end code, you can just declare inputs/outputs of a model in a JSON schema and Port will do the rest.
+            Port creates input and output elements, parses files, loads needed libraries and uses web workers to run everything smoothly. 
+            It's not a swiss-army knife, not a framework. Port solves one specific task - wrapping algorithms in a web interface.
           </p>
         </div>
       </div>
@@ -31,7 +36,7 @@
           <div class="card source bordered">
             <div class="card-content">
 	      <h5>Javascript</h5>
-              <p>You can port regular JavaScript functions and classes</p>
+              <p>Port regular JavaScript functions and classes or use async methods</p>
             </div>
           </div>
           </div>
@@ -46,8 +51,8 @@
         <div class="col s3">
           <div class="card source bordered">
             <div class="card-content">
-	      <h5>SKlearn</h5>
-              <p>Convert trained SKlearn models to Javascript with <a href="https://github.com/nok/sklearn-porter">sklearn-porter</a></p>
+	      <h5>Python</h5>
+              <p>Run Python with its scientific stack in the browser with Pyodide.js</p>
             </div>
           </div>
         </div>
