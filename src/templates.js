@@ -8,7 +8,7 @@ module.exports = {
       <!-- <h6>Inputs</h6> -->
       <div class="card bordered">
         <div class="card-content" id="inputs"></div>
-        <a class="waves-effect waves-light btn" id="run" style="width:100%"><span>▸</span>&nbsp;&nbsp;Run</a>
+        <a class="waves-effect waves-light btn port-btn port-flat port-hidden" id="run" style="width:100%; text-align: right"><span>▸</span>&nbsp;&nbsp;Run</a>
       </div>
     </div>
     <div class="col s12 m6">
@@ -24,10 +24,12 @@ module.exports = {
   'sidebar':
 `<div class="port-app">
   <div class="row">
-    <div class="col s12 m3 port-sidebar">
-      <div id="model"></div>
-      <div id="inputs"></div>
-      <a class="waves-effect waves-light btn" id="run"><span>▸</span>&nbsp;&nbsp;Run</a>
+    <div class="col s12 m3">
+      <div class="port-sidebar">
+        <div id="model"></div>
+        <div id="inputs"></div>
+        <a class="waves-effect waves-light btn port-btn port-flat port-hidden" id="run"><span>▸</span>&nbsp;&nbsp;Run</a>
+      </div>
     </div>
     <div class="col s12 m9">
       <div id="outputs"></div>

@@ -72,7 +72,13 @@ p.model-info {
 .row .port-sidebar {
   background-color: #F5F5F5;
   border-radius: 5px;
-  padding-bottom: 15px;
+  margin: 7px 0 0 0;
+  padding: 5px 13px 13px 13px;
+}
+
+.port-sidebar .port-title{
+  font-size: 28px;
+  margin-top: 15px;
 }
 
 .port-copy {
@@ -84,6 +90,36 @@ p.model-info {
 
 .port-copy p {
   margin: 5px;
+}
+
+.port-flat {
+  box-shadow: none !important;
+  background-color: #26C9BD;
+}
+
+.port-collection-item {
+  min-height: 43px;
+}
+
+.port-collection-item span.port-badge {
+  min-width: 100px;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  font-size: 1rem;
+  height: 22px;
+  color: #888;
+  float: left;
+  box-sizing: border-box;
+  text-transform: capitalize;
+}
+
+.port-hidden {
+  display: none;
+}
+
+.port-btn {
+  background-image: linear-gradient(141deg, #27c9ba 0%, #1fc8db 51%, #2cb5e8 75%);
 }
 
 @media only screen and (max-width: 860px) {

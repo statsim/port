@@ -76,8 +76,12 @@ class Port {
       this.outputsContainer = portElement.querySelector('#outputs')
       this.modelContainer = portElement.querySelector('#model')
       // Make run button active
-      portElement.querySelector('#run').onclick = () => {
-        this.run()
+      if (!this.schema.model.autorun) {
+        let runButton = portElement.querySelector('#run')
+        runButton.style.display = 'inline-block'
+        runButton.onclick = () => {
+          this.run()
+        }
       }
     } else {
       this.inputsContainer = this.params.inputsContainer
@@ -99,6 +103,7 @@ class Port {
     if (this.modelContainer && this.schema.model) {
       if (this.schema.model.title) {
         let h = document.createElement('h4')
+        h.className = 'port-title'
         h.innerText = this.schema.model.title
         this.modelContainer.appendChild(h)
       }
@@ -157,6 +162,7 @@ class Port {
           }
         }
       }
+
       // Add element to input object
       input.element = element
       this.inputsContainer.appendChild(element.element)
@@ -224,7 +230,7 @@ class Port {
     } else if (['function', 'class', 'async-init', 'async-function'].includes(this.schema.model.type)) {
       // Initialize worker with the model
       if (this.schema.model.worker) {
-        this.worker = new Worker('./worker.js')
+        this.worker = new Worker('./worker-temp.js')
 
         if (this.schema.model.url) {
           fetch(this.schema.model.url)
@@ -304,16 +310,18 @@ class Port {
     const schema = this.schema
     console.log('[Port] Running the model')
     let inputValues
-    if (schema.model && schema.model.container && schema.model.container === 'object') {
+    if (schema.model && schema.model.container && schema.model.container === 'args') {
+      console.log('[Port] Pass inputs as function arguments')
+      inputValues = schema.inputs.map(input => {
+        return input.element.getValue()
+      })
+    } else {
+      console.log('[Port] Pass inputs in an object')
       inputValues = {}
       schema.inputs.forEach(input => {
         if (input.element) {
           inputValues[input.name] = input.element.getValue()
         }
-      })
-    } else {
-      inputValues = schema.inputs.map(input => {
-        return input.element.getValue()
       })
     }
     // We have all input values pass them to worker or tf
@@ -353,7 +361,7 @@ class Port {
           if (this.schema.model.container === 'args') {
             res = this.modelFunc.apply(null, inputValues)
           } else {
-            console.log('[Port] Applying inputs as object/array')
+            console.log('[Port] Applying inputs as object')
             res = this.modelFunc(inputValues)
           }
           console.log('[Port] modelFunc results:', res)
@@ -399,13 +407,13 @@ class Port {
         collection.className = 'collection'
 
         let collectionItem = document.createElement('li')
-        collectionItem.className = 'collection-item'
+        collectionItem.className = 'collection-item port-collection-item'
         collectionItem.innerText = value
         collection.appendChild(collectionItem)
 
         if (output.name && output.name.length) {
           let spanElement = document.createElement('span')
-          spanElement.className = 'badge'
+          spanElement.className = 'badge port-badge'
           spanElement.innerText = output.name
           collectionItem.appendChild(spanElement)
         }
@@ -424,7 +432,7 @@ class Port {
 
     // TODO: Think about all edge cases
     // * No output field, but reactivity
-    if ((this.schema.outputs && this.schema.outputs.length) /* || (typeof data === 'object') */) {
+    if ((this.schema.outputs && this.schema.outputs.length) || (typeof data === 'object')) {
       if (Array.isArray(data)) {
         let arrData
         if (data.length === this.schema.outputs.length) {
@@ -448,9 +456,6 @@ class Port {
               this._showOutput(data[output.name], output)
               updatedSomething = true
             }
-            // else {
-            //  this._showOutput(data[Object.keys(data)[i]], output)
-            // }
           })
         }
 

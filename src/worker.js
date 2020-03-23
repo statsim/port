@@ -32,7 +32,7 @@ onmessage = function (e) {
       */
     } else {
       // Javascript
-      this.container = model.container || 'args'
+      this.container = model.container
 
       if (model.code) {
         console.log('[Worker] Load script from text: ', model.code)

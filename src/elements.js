@@ -142,11 +142,24 @@ class SelectElement {
     selectElement.className = 'browser-default'
     selectElement.id = name
 
-    if (input.values && input.values.length) {
-      input.values.forEach((val, i) => {
+    let options = input.values || input.options
+
+    if (options && options.length) {
+      options.forEach((val, i) => {
         let optionElement = document.createElement('option')
-        optionElement.value = i
-        optionElement.innerText = val
+        let v
+        if (typeof val === 'object') {
+          optionElement.value = val.value
+          optionElement.innerText = val.text
+          v = val.value
+        } else {
+          optionElement.value = val
+          optionElement.innerText = val
+          v = val
+        }
+        if (input.default && (v === input.default)) {
+          optionElement.selected = true
+        }
         selectElement.appendChild(optionElement)
       })
     }
@@ -179,7 +192,7 @@ class FileElement {
     wrapper.className = 'file-field input-field'
 
     let btnElement = document.createElement('div')
-    btnElement.className = 'btn'
+    btnElement.className = 'btn port-flat'
 
     let spanElement = document.createElement('span')
     spanElement.innerText = 'File'
@@ -254,7 +267,7 @@ class ImageElement {
     this.context = context
 
     let btnElement = document.createElement('div')
-    btnElement.className = 'btn'
+    btnElement.className = 'btn port-flat'
 
     let spanElement = document.createElement('span')
     spanElement.innerText = 'File'
