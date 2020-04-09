@@ -25,9 +25,11 @@ function htmlToElement (html) {
 class Port {
   constructor (params) {
     console.log('[Port] Initializing Port with params: ', params)
+    params.schema = params.schema || params.config
     this.params = params
 
     // Get schema then initialize a model
+
     if (params.schema) {
       if (typeof params.schema === 'object') {
         console.log('[Port] Received schema as object: ', params.schema)
@@ -61,6 +63,20 @@ class Port {
     // Check for worker flag
     if (typeof schema.model.worker === 'undefined') {
       schema.model.worker = true
+    }
+
+    // Check if name is present, if not - get name from the file
+    if (typeof schema.model.name === 'undefined') {
+      // Two options here
+      if (schema.model.url) {
+        // 1. Get the name from the file name
+        schema.model.name = schema.model.url.split('/').pop().split('.')[0]
+        console.log('[Port] Use name from url: ', schema.model.name)
+      } else if (schema.model.code) {
+        // 2. Get the name from the url
+        schema.model.name = schema.model.code.name
+        console.log('[Port] Use name from code: ', schema.model.name)
+      }
     }
 
     this.schema = clone(schema)
