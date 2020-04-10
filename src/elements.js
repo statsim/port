@@ -10,6 +10,10 @@ class InputElement {
     let inputElement = document.createElement('input')
     inputElement.id = name
 
+    if (typeof input.default !== 'undefined') {
+      inputElement.value = input.default
+    }
+
     switch (input.type) {
       case 'int':
         inputElement.type = 'number'
