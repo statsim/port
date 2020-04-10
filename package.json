@@ -1,6 +1,6 @@
 {
   "name": "port",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "main": "index.js",
   "private": true,
@@ -27,7 +27,7 @@
     "babelify": "^10.0.0",
     "browserify": "^16.2.3",
     "faucet": "0.0.1",
-    "nodemon": "^1.18.7",
+    "nodemon": "^1.19.4",
     "puppeteer": "^1.12.2",
     "stripify": "^6.0.0",
     "tape": "^4.9.1",

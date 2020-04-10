@@ -441,84 +441,89 @@ class Port {
   output (data) {
     // const blob = new Blob([file], { type: type || 'application/*' });
     // const file = window.URL.createObjectURL(blob)
-    console.log('[Port] Got output results of type:', typeof data)
-    console.log(data)
 
-    this.outputsContainer.innerHTML = ''
+    // What TODO with self rendered content?
+    // Remove outputs only if something is returned? Sounds good at the moment
+    if (typeof data !== 'undefined') {
+      console.log('[Port] Got output results of type:', typeof data)
+      console.log(data)
 
-    // TODO: Think about all edge cases
-    // * No output field, but reactivity
-    if ((this.schema.outputs && this.schema.outputs.length) || (typeof data === 'object')) {
-      if (Array.isArray(data)) {
-        let arrData
-        if (data.length === this.schema.outputs.length) {
-          arrData = data
-        } else if (Array.isArray(data[0]) && (data[0].length === this.schema.outputs.length)) {
-          arrData = data[0]
-        }
-        if (Array.isArray(arrData)) {
-          this.schema.outputs.forEach((output, i) => {
-            this._showOutput(arrData[i], output)
-          })
-        } else {
-          this._showOutput(data, this.schema.outputs[0])
-        }
-      } else if (typeof data === 'object') {
-        let updatedSomething = false
-        if (this.schema.outputs) {
-          this.schema.outputs.forEach((output, i) => {
-            if (output.name && (typeof data[output.name] !== 'undefined')) {
-              console.log('[Port] Show output: ', output.name)
-              this._showOutput(data[output.name], output)
+      this.outputsContainer.innerHTML = ''
+
+      // TODO: Think about all edge cases
+      // * No output field, but reactivity
+      if ((this.schema.outputs && this.schema.outputs.length) || (typeof data === 'object')) {
+        if (Array.isArray(data)) {
+          let arrData
+          if (data.length === this.schema.outputs.length) {
+            arrData = data
+          } else if (Array.isArray(data[0]) && (data[0].length === this.schema.outputs.length)) {
+            arrData = data[0]
+          }
+          if (Array.isArray(arrData)) {
+            this.schema.outputs.forEach((output, i) => {
+              this._showOutput(arrData[i], output)
+            })
+          } else {
+            this._showOutput(data, this.schema.outputs[0])
+          }
+        } else if (typeof data === 'object') {
+          let updatedSomething = false
+          if (this.schema.outputs) {
+            this.schema.outputs.forEach((output, i) => {
+              if (output.name && (typeof data[output.name] !== 'undefined')) {
+                console.log('[Port] Show output: ', output.name)
+                this._showOutput(data[output.name], output)
+                updatedSomething = true
+              }
+            })
+          }
+
+          this.schema.inputs.forEach((input, i) => {
+            console.log(input.name, data[input.name])
+            if (input.name && (typeof data[input.name] !== 'undefined')) {
+              console.log('[Port] Update input: ', input.name)
+              const el = document.getElementById(input.name)
+              const d = data[input.name]
+              if (typeof d === 'object') {
+                Object.keys(d).forEach(k => {
+                  if (k === 'options') {
+                    while (el.length) {
+                      el.remove(el.length - 1)
+                    }
+                    d[k].forEach(o => {
+                      const option = document.createElement('option')
+                      option.text = o
+                      el.add(option)
+                    })
+                  } else {
+                    el[k] = d[k]
+                  }
+                })
+              } else {
+                document.getElementById(input.name).value = d
+              }
+              // Fix labels stuck on top of inputs
+              // https://stackoverflow.com/questions/54206131/changing-the-value-of-html-input-tag
+              window['M'].updateTextFields()
               updatedSomething = true
             }
           })
-        }
 
-        this.schema.inputs.forEach((input, i) => {
-          console.log(input.name, data[input.name])
-          if (input.name && (typeof data[input.name] !== 'undefined')) {
-            console.log('[Port] Update input: ', input.name)
-            const el = document.getElementById(input.name)
-            const d = data[input.name]
-            if (typeof d === 'object') {
-              Object.keys(d).forEach(k => {
-                if (k === 'options') {
-                  while (el.length) {
-                    el.remove(el.length - 1)
-                  }
-                  d[k].forEach(o => {
-                    const option = document.createElement('option')
-                    option.text = o
-                    el.add(option)
-                  })
-                } else {
-                  el[k] = d[k]
-                }
-              })
-            } else {
-              document.getElementById(input.name).value = d
-            }
-            // Fix labels stuck on top of inputs
-            // https://stackoverflow.com/questions/54206131/changing-the-value-of-html-input-tag
-            window['M'].updateTextFields()
-            updatedSomething = true
+          if (!updatedSomething) {
+            let pre = document.createElement('pre')
+            pre.innerText = JSON.stringify(data, null, 2)
+            this.outputsContainer.appendChild(pre)
           }
-        })
-
-        if (!updatedSomething) {
-          let pre = document.createElement('pre')
-          pre.innerText = JSON.stringify(data, null, 2)
-          this.outputsContainer.appendChild(pre)
+        } else {
+          this._showOutput(data, this.schema.outputs[0])
         }
       } else {
-        this._showOutput(data, this.schema.outputs[0])
+        // Output raw object
+        let pre = document.createElement('pre')
+        pre.innerText = JSON.stringify(data, null, 2)
+        this.outputsContainer.appendChild(pre)
       }
-    } else {
-      // Output raw object
-      let pre = document.createElement('pre')
-      pre.innerText = JSON.stringify(data, null, 2)
-      this.outputsContainer.appendChild(pre)
     }
   }
 }
