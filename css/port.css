@@ -55,6 +55,14 @@ p.model-info {
   color: black;
 }
 
+.hidden {
+  display: none;
+}
+
+input.hidden + label {
+  display: none;
+}
+
 #outputs {
   font-size: 16px;
   font-weight: 300;

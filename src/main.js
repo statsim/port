@@ -10,7 +10,8 @@ const Blob = window['Blob']
 
 // Deep clone a simple object
 function clone (obj) {
-  return JSON.parse(JSON.stringify(obj))
+  // return JSON.parse(JSON.stringify(obj))
+  return Object.assign({}, obj)
 }
 
 // Create a dom element from string
@@ -52,7 +53,7 @@ class Port {
 
   // Initialize model from schema
   init (schema) {
-    console.log('[Port] Initializing schema')
+    console.log('[Port] Initializing schema', schema)
 
     // Convert JS code to string
     if (schema.model.code && (typeof schema.model.code !== 'string')) {
@@ -167,14 +168,25 @@ class Port {
           break
       }
 
+      if (input.onchange && !element.inputElement.onchange) {
+        setTimeout(() => {
+          this.output(input.onchange(element.getValue()))
+        }, 0)
+      }
+
       // Add onchange listener to original input element if model has autorun flag
-      if (this.schema.model.autorun || input.reactive) {
+      if (this.schema.model.autorun || input.reactive || input.onchange) {
         if (input.type === 'file') {
           element.cb = this
         } else {
           element.inputElement.onchange = () => {
             console.log('[Input] Change event')
-            this.run()
+            if (input.onchange) {
+              this.output(input.onchange(element.getValue()))
+            }
+            if (this.schema.model.autorun || input.reactive) {
+              this.run()
+            }
           }
         }
       }
@@ -442,88 +454,83 @@ class Port {
     // const blob = new Blob([file], { type: type || 'application/*' });
     // const file = window.URL.createObjectURL(blob)
 
-    // What TODO with self rendered content?
-    // Remove outputs only if something is returned? Sounds good at the moment
-    if (typeof data !== 'undefined') {
-      console.log('[Port] Got output results of type:', typeof data)
-      console.log(data)
+    // TODO: Think about all edge cases
+    // * No output field, but reactivity
+    if (typeof data === 'undefined') {
+      return
+    }
 
+    console.log('[Port] Got output results of type:', typeof data)
+    if (Array.isArray(data) && this.schema.outputs && this.schema.outputs.length) {
       this.outputsContainer.innerHTML = ''
-
-      // TODO: Think about all edge cases
-      // * No output field, but reactivity
-      if ((this.schema.outputs && this.schema.outputs.length) || (typeof data === 'object')) {
-        if (Array.isArray(data)) {
-          let arrData
-          if (data.length === this.schema.outputs.length) {
-            arrData = data
-          } else if (Array.isArray(data[0]) && (data[0].length === this.schema.outputs.length)) {
-            arrData = data[0]
+      let arrData
+      if (data.length === this.schema.outputs.length) {
+        arrData = data
+      } else if (Array.isArray(data[0]) && (data[0].length === this.schema.outputs.length)) {
+        arrData = data[0]
+      }
+      if (Array.isArray(arrData)) {
+        this.schema.outputs.forEach((output, i) => {
+          this._showOutput(arrData[i], output)
+        })
+      } else {
+        this._showOutput(data, this.schema.outputs[0])
+      }
+    } else if (typeof data === 'object') {
+      let updatedSomething = false
+      if (this.schema.outputs) {
+        this.outputsContainer.innerHTML = ''
+        this.schema.outputs.forEach((output, i) => {
+          if (output.name && (typeof data[output.name] !== 'undefined')) {
+            console.log('[Port] Show output: ', output.name)
+            this._showOutput(data[output.name], output)
+            updatedSomething = true
           }
-          if (Array.isArray(arrData)) {
-            this.schema.outputs.forEach((output, i) => {
-              this._showOutput(arrData[i], output)
+        })
+      }
+
+      this.schema.inputs.forEach((input, i) => {
+        console.log(input.name, data[input.name])
+        if (input.name && (typeof data[input.name] !== 'undefined')) {
+          console.log('[Port] Update input: ', input.name)
+          const el = document.getElementById(input.name)
+          const d = data[input.name]
+          if (typeof d === 'object') {
+            Object.keys(d).forEach(k => {
+              if (k === 'options') {
+                while (el.length) {
+                  el.remove(el.length - 1)
+                }
+                d[k].forEach(o => {
+                  const option = document.createElement('option')
+                  option.text = o
+                  el.add(option)
+                })
+              } else if ((typeof el[k] === 'object') && (typeof d[k] === 'object')) {
+                Object.assign(el[k], d[k])
+              } else {
+                el[k] = d[k]
+              }
             })
           } else {
-            this._showOutput(data, this.schema.outputs[0])
+            document.getElementById(input.name).value = d
           }
-        } else if (typeof data === 'object') {
-          let updatedSomething = false
-          if (this.schema.outputs) {
-            this.schema.outputs.forEach((output, i) => {
-              if (output.name && (typeof data[output.name] !== 'undefined')) {
-                console.log('[Port] Show output: ', output.name)
-                this._showOutput(data[output.name], output)
-                updatedSomething = true
-              }
-            })
-          }
-
-          this.schema.inputs.forEach((input, i) => {
-            console.log(input.name, data[input.name])
-            if (input.name && (typeof data[input.name] !== 'undefined')) {
-              console.log('[Port] Update input: ', input.name)
-              const el = document.getElementById(input.name)
-              const d = data[input.name]
-              if (typeof d === 'object') {
-                Object.keys(d).forEach(k => {
-                  if (k === 'options') {
-                    while (el.length) {
-                      el.remove(el.length - 1)
-                    }
-                    d[k].forEach(o => {
-                      const option = document.createElement('option')
-                      option.text = o
-                      el.add(option)
-                    })
-                  } else {
-                    el[k] = d[k]
-                  }
-                })
-              } else {
-                document.getElementById(input.name).value = d
-              }
-              // Fix labels stuck on top of inputs
-              // https://stackoverflow.com/questions/54206131/changing-the-value-of-html-input-tag
-              window['M'].updateTextFields()
-              updatedSomething = true
-            }
-          })
-
-          if (!updatedSomething) {
-            let pre = document.createElement('pre')
-            pre.innerText = JSON.stringify(data, null, 2)
-            this.outputsContainer.appendChild(pre)
-          }
-        } else {
-          this._showOutput(data, this.schema.outputs[0])
+          // Fix labels stuck on top of inputs
+          // https://stackoverflow.com/questions/54206131/changing-the-value-of-html-input-tag
+          window['M'].updateTextFields()
+          updatedSomething = true
         }
-      } else {
-        // Output raw object
+      })
+
+      if (!updatedSomething) {
+        this.outputsContainer.innerHTML = ''
         let pre = document.createElement('pre')
         pre.innerText = JSON.stringify(data, null, 2)
         this.outputsContainer.appendChild(pre)
       }
+    } else {
+      const d = new Date()
+      this.outputsContainer.innerHTML += '\n' + d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds() + ' > ' + data
     }
   }
 }
