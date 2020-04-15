@@ -6,6 +6,8 @@ const elements = require('./elements')
 const fetch = window['fetch']
 const Blob = window['Blob']
 
+const version = '0.0.7'
+
 // const Worker = window['Worker']
 
 // Deep clone a simple object
@@ -33,6 +35,7 @@ class Port {
     console.log('[Port] Initializing Port with params: ', params)
     params.schema = params.schema || params.config
     this.params = params
+    this.__version__ = version
 
     this.overlay = document.createElement('div')
     this.overlay.id = 'overlay'
@@ -315,6 +318,7 @@ class Port {
         script.src = this.schema.model.url
         script.onload = () => {
           window['M'].toast({html: 'Loaded: JS model'})
+          this._hideOverlay()
           console.log('[Port] Loaded JS model in main window')
 
           // Initializing the model (same in worker)
@@ -343,6 +347,7 @@ class Port {
       script.src = 'dist/tf.min.js'
       script.onload = () => {
         console.log('[Port] Loaded TF.js')
+        this._hideOverlay()
         window['tf'].loadLayersModel(this.schema.model.url).then(res => {
           console.log('[Port] Loaded Tensorflow model')
         })
