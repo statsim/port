@@ -6,7 +6,7 @@ const elements = require('./elements')
 const fetch = window['fetch']
 const Blob = window['Blob']
 
-const version = '0.0.7'
+const version = '0.0.8'
 
 // const Worker = window['Worker']
 
@@ -282,7 +282,7 @@ class Port {
           fetch(this.schema.model.url)
             .then(res => res.text())
             .then(res => {
-              console.log('[Port] Loaded js code')
+              console.log('[Port] Loaded js code for worker')
               this.schema.model.code = res
               this.worker.postMessage(this.schema.model)
             })
@@ -293,13 +293,13 @@ class Port {
         }
 
         this.worker.onmessage = (e) => {
+          this._hideOverlay()
           const data = e.data
           console.log('[Port] Response from worker:', data)
           if ((typeof data === 'object') && (data._status)) {
             switch (data._status) {
               case 'loaded':
                 window['M'].toast({html: 'Loaded: JS model (in worker)'})
-                this._hideOverlay()
                 break
             }
           } else {
@@ -592,6 +592,7 @@ class Port {
       }
     } else if (this.schema.outputs && this.schema.outputs.length === 1) {
       // One output value passed as raw js object
+      this.outputsContainer.innerHTML = ''
       this._showOutput(data, this.schema.outputs[0])
     } else {
       this.outputsContainer.innerHTML += data

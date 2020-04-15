@@ -65,6 +65,8 @@ onmessage = function (e) {
         this.modelFunc = this[model.name]
         console.log(this.modelFunc)
       }
+
+      postMessage({_status: 'loaded'})
     }
   } else {
     /*
