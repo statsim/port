@@ -14,6 +14,11 @@ function clone (obj) {
   return Object.assign({}, obj)
 }
 
+// https://stackoverflow.com/questions/8511281/check-if-a-value-is-an-object-in-javascript
+function isObject (item) {
+  return (typeof item === 'object' && !Array.isArray(item) && item !== null)
+}
+
 // Create a dom element from string
 // https://stackoverflow.com/questions/494143/creating-a-new-dom-element-from-an-html-string-using-built-in-dom-methods-or-pro/35385518#35385518
 function htmlToElement (html) {
@@ -29,8 +34,26 @@ class Port {
     params.schema = params.schema || params.config
     this.params = params
 
-    // Get schema then initialize a model
+    this.overlay = document.createElement('div')
+    this.overlay.id = 'overlay'
+    this.overlay.className = 'valign-wrapper'
+    this.overlay.innerHTML = `
+      <div class="center-align" style="width:100%">
+        <div class="preloader-wrapper small active">
+          <div class="spinner-layer spinner-green-only">
+            <div class="circle-clipper left">
+              <div class="circle"></div>
+            </div><div class="gap-patch">
+              <div class="circle"></div>
+            </div><div class="circle-clipper right">
+              <div class="circle"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
 
+    // Get schema then initialize a model
     if (params.schema) {
       if (typeof params.schema === 'object') {
         console.log('[Port] Received schema as object: ', params.schema)
@@ -49,6 +72,14 @@ class Port {
           })
       }
     }
+  }
+
+  _showOverlay () {
+    this.overlay.style.display = 'flex'
+  }
+
+  _hideOverlay () {
+    this.overlay.style.display = 'none'
   }
 
   // Initialize model from schema
@@ -105,6 +136,9 @@ class Port {
       this.outputsContainer = this.params.outputsContainer
       this.modelContainer = this.params.modelContainer
     }
+
+    // Init overlay
+    this.inputsContainer.appendChild(this.overlay)
 
     console.log('[Port] Init inputs, outputs and model description')
 
@@ -201,32 +235,14 @@ class Port {
     window['M'].FormSelect.init(selectElements, {})
 
     // Init Model
+    // ----------
     if (this.schema.model.type === 'py') {
       // Add loading indicator
-      var overlay = document.createElement('div')
-      overlay.id = 'overlay'
-      overlay.className = 'valign-wrapper'
-      overlay.innerHTML = `
-        <div class="center-align" style="width:100%">
-          <div class="preloader-wrapper small active">
-            <div class="spinner-layer spinner-green-only">
-              <div class="circle-clipper left">
-                <div class="circle"></div>
-              </div><div class="gap-patch">
-                <div class="circle"></div>
-              </div><div class="circle-clipper right">
-                <div class="circle"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `
-      this.inputsContainer.appendChild(overlay)
-
+      this._showOverlay()
       let script = document.createElement('script')
       script.src = 'https://pyodide.cdn.iodide.io/pyodide.js'
       script.onload = () => {
-        window['M'].toast({html: 'Loaded: Main framework'})
+        window['M'].toast({html: 'Loaded: Python'})
         window['languagePluginLoader'].then(() => {
           fetch(this.schema.model.url)
             .then(res => res.text())
@@ -238,19 +254,19 @@ class Port {
               console.log('Imports: ', imports)
               window['pyodide'].runPythonAsync(imports, () => {})
                 .then((res) => {
-                  window['M'].toast({html: 'Loaded: Libs'})
-                  this.inputsContainer.removeChild(overlay)
+                  window['M'].toast({html: 'Loaded: Dependencies'})
+                  this._hideOverlay()
                 })
                 .catch((err) => {
                   console.log(err)
                   window['M'].toast({html: 'Error loading libs'})
-                  this.inputsContainer.removeChild(overlay)
+                  this._hideOverlay()
                 })
             })
             .catch((err) => {
               console.log(err)
               window['M'].toast({html: 'Error loading python code'})
-              this.inputsContainer.removeChild(overlay)
+              this._hideOverlay()
             })
         })
       }
@@ -259,7 +275,6 @@ class Port {
       // Initialize worker with the model
       if (this.schema.model.worker) {
         this.worker = new Worker('./worker-temp.js')
-
         if (this.schema.model.url) {
           fetch(this.schema.model.url)
             .then(res => res.text())
@@ -281,15 +296,17 @@ class Port {
             switch (data._status) {
               case 'loaded':
                 window['M'].toast({html: 'Loaded: JS model (in worker)'})
-                this.inputsContainer.removeChild(overlay)
+                this._hideOverlay()
                 break
             }
           } else {
             this.output(data)
           }
         }
-        this.worker.onerror = () => {
-          console.log('[Port] Error from worker')
+        this.worker.onerror = (e) => {
+          this._hideOverlay()
+          window['M'].toast({html: e.message, classes: 'error-toast'})
+          console.log('[Port] Error from worker:', e)
         }
       } else {
         // Initialize model in main window
@@ -332,11 +349,43 @@ class Port {
       }
       document.head.appendChild(script)
     }
+
+    // Init render
+    // -----------
+    if (this.schema.render && this.schema.render.url) {
+      console.log('[Port] Init render in window')
+      let script = document.createElement('script')
+      script.src = this.schema.render.url
+      script.onload = () => {
+        window['M'].toast({html: 'Loaded: JS render'})
+        console.log('[Port] Loaded JS render')
+
+        // Initializing the render (same in worker)
+        if (this.schema.render.type === 'class') {
+          console.log('[Port] Init render as class')
+          const renderClass = new window[this.schema.render.name]()
+          this.renderFunc = (...a) => {
+            return renderClass[this.schema.render.method || 'render'](...a)
+          }
+        } else if (this.schema.render.type === 'async-init') {
+          console.log('[Port] Init render function with promise')
+          window[this.schema.render.name]().then((m) => {
+            console.log('[Port] Async rebder init resolved: ', m)
+            this.renderFunc = m
+          })
+        } else {
+          console.log('[Port] Init render as function')
+          this.renderFunc = window[this.schema.render.name]
+        }
+      }
+      document.head.appendChild(script)
+    }
   }
 
   run () {
     const schema = this.schema
     console.log('[Port] Running the model')
+    // Collect input values
     let inputValues
     if (schema.model && schema.model.container && schema.model.container === 'args') {
       console.log('[Port] Pass inputs as function arguments')
@@ -352,7 +401,8 @@ class Port {
         }
       })
     }
-    // We have all input values pass them to worker or tf
+    // We have all input values here, pass them to worker, window.modelFunc or tf
+    this._showOverlay()
     console.log('[Port] Input values: ', inputValues)
     switch (schema.model.type) {
       case 'tf':
@@ -456,44 +506,22 @@ class Port {
 
     // TODO: Think about all edge cases
     // * No output field, but reactivity
+    this._hideOverlay()
+
     if (typeof data === 'undefined') {
       return
     }
 
     console.log('[Port] Got output results of type:', typeof data)
-    if (Array.isArray(data) && this.schema.outputs && this.schema.outputs.length) {
-      this.outputsContainer.innerHTML = ''
-      let arrData
-      if (data.length === this.schema.outputs.length) {
-        arrData = data
-      } else if (Array.isArray(data[0]) && (data[0].length === this.schema.outputs.length)) {
-        arrData = data[0]
-      }
-      if (Array.isArray(arrData)) {
-        this.schema.outputs.forEach((output, i) => {
-          this._showOutput(arrData[i], output)
-        })
-      } else {
-        this._showOutput(data, this.schema.outputs[0])
-      }
-    } else if (typeof data === 'object') {
-      let updatedSomething = false
-      if (this.schema.outputs) {
-        this.outputsContainer.innerHTML = ''
-        this.schema.outputs.forEach((output, i) => {
-          if (output.name && (typeof data[output.name] !== 'undefined')) {
-            console.log('[Port] Show output: ', output.name)
-            this._showOutput(data[output.name], output)
-            updatedSomething = true
-          }
-        })
-      }
-
+    const inputNames = this.schema.inputs.map(i => i.name)
+    if (isObject(data) && Object.keys(data).every(key => inputNames.includes(key))) {
+      // Update inputs
+      console.log('[Port] Updating inputs:', Object.keys(data))
       this.schema.inputs.forEach((input, i) => {
-        console.log(input.name, data[input.name])
         if (input.name && (typeof data[input.name] !== 'undefined')) {
-          console.log('[Port] Update input: ', input.name)
-          const el = document.getElementById(input.name)
+          console.log(input)
+          const el = input.element.inputElement
+          console.log('[Port] Update input: ', input.name, el, 'with data:', data[input.name])
           const d = data[input.name]
           if (typeof d === 'object') {
             Object.keys(d).forEach(k => {
@@ -513,24 +541,55 @@ class Port {
               }
             })
           } else {
-            document.getElementById(input.name).value = d
+            el.value = d
           }
           // Fix labels stuck on top of inputs
           // https://stackoverflow.com/questions/54206131/changing-the-value-of-html-input-tag
           window['M'].updateTextFields()
-          updatedSomething = true
         }
       })
-
+    } else if (this.renderFunc) {
+      // Pass data to the custom render function
+      console.log('[Port] Call render function')
+      this.renderFunc(data)
+    } else if (Array.isArray(data) && this.schema.outputs && this.schema.outputs.length) {
+      // Display array output
+      this.outputsContainer.innerHTML = ''
+      let arrData
+      if (data.length === this.schema.outputs.length) {
+        arrData = data
+      } else if (Array.isArray(data[0]) && (data[0].length === this.schema.outputs.length)) {
+        arrData = data[0]
+      }
+      if (Array.isArray(arrData)) {
+        this.schema.outputs.forEach((output, i) => {
+          this._showOutput(arrData[i], output)
+        })
+      } else {
+        this._showOutput(data, this.schema.outputs[0])
+      }
+    } else if (typeof data === 'object') {
+      this.outputsContainer.innerHTML = ''
+      let updatedSomething = false
+      if (this.schema.outputs) {
+        this.schema.outputs.forEach((output, i) => {
+          if (output.name && (typeof data[output.name] !== 'undefined')) {
+            console.log('[Port] Show output: ', output.name)
+            this._showOutput(data[output.name], output)
+            updatedSomething = true
+          }
+        })
+      }
       if (!updatedSomething) {
-        this.outputsContainer.innerHTML = ''
         let pre = document.createElement('pre')
         pre.innerText = JSON.stringify(data, null, 2)
         this.outputsContainer.appendChild(pre)
       }
+    } else if (this.schema.outputs && this.schema.outputs.length === 1) {
+      // One output value passed as raw js object
+      this._showOutput(data, this.schema.outputs[0])
     } else {
-      const d = new Date()
-      this.outputsContainer.innerHTML += '\n' + d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds() + ' > ' + data
+      this.outputsContainer.innerHTML += data
     }
   }
 }
