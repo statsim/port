@@ -6,7 +6,7 @@ const elements = require('./elements')
 const fetch = window['fetch']
 const Blob = window['Blob']
 
-const version = '0.0.8'
+const version = '0.0.9'
 
 // const Worker = window['Worker']
 
@@ -476,12 +476,12 @@ class Port {
         this.outputsContainer.appendChild(svgContainer)
 
         // Append download button
-        let svgBlob = new Blob([value], {type: 'text/plain;charset=utf-8'})
+        let svgBlob = new Blob([value.content || value], {type: 'text/plain;charset=utf-8'})
         let svgDownloadButton = document.createElement('a')
         svgDownloadButton.className = 'waves-effect waves-light btn'
-        svgDownloadButton.innerText = 'Download'
+        svgDownloadButton.innerText = 'Download' + value.filename || ''
         svgDownloadButton.onclick = () => {
-          FileSaver.saveAs(svgBlob, 'code.svg')
+          FileSaver.saveAs(svgBlob, value.filename || 'output.svg')
         }
         this.outputsContainer.appendChild(svgDownloadButton)
         break
