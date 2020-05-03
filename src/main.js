@@ -460,12 +460,12 @@ class Port {
     console.log('[Port] Show output: ', value, output)
     switch (output.type) {
       case 'file':
-        let fileBlob = new Blob([value], {type: 'text/plain;charset=utf-8'})
+        let fileBlob = new Blob([value.content || value], {type: 'text/plain;charset=utf-8'})
         let a = document.createElement('a')
         a.className = 'waves-effect waves-light btn'
-        a.innerText = 'Download'
+        a.innerText = 'Download ' + value.filename || ''
         a.onclick = () => {
-          FileSaver.saveAs(fileBlob, output.filename || 'output')
+          FileSaver.saveAs(fileBlob, value.filename || 'output')
         }
         this.outputsContainer.appendChild(a)
         break

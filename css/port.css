@@ -84,7 +84,7 @@ input.hidden + label {
 }
 
 .spinner-green, .spinner-green-only {
-  border-color: #26c9bf;
+  border-color: #bdbdbd;
 }
 
 .row .port-sidebar {
