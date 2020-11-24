@@ -9,6 +9,10 @@ h6 {
   margin-bottom: 1px;
 }
 
+select {
+  display: block;
+}
+
 .logo {
   font-size: 28px;
   font-weight: 800;
