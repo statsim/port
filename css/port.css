@@ -59,6 +59,10 @@ p.model-info {
   display: none;
 }
 
+.hidden + label {
+  display: none;
+}
+
 input.hidden + label {
   display: none;
 }
