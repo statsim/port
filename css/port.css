@@ -152,6 +152,11 @@ input.hidden + label {
   background: #DA224C;
 }
 
+.input-field > label:not(.label-icon).active {
+  -webkit-transform: translateY(-15px) scale(0.7);
+  transform: translateY(-15px) scale(0.7);
+}
+
 @media only screen and (max-width: 860px) {
   nav.white {
     background-color: #F5F5F5 !important;

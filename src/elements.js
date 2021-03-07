@@ -228,8 +228,13 @@ class FileElement {
     textInputElement.className = 'file-path validate'
     wrapperElement.appendChild(textInputElement)
 
+    let labelElement = document.createElement('label')
+    labelElement.className = 'active'
+    labelElement.innerText = input.name || 'Select file'
+
     wrapper.appendChild(btnElement)
     wrapper.appendChild(wrapperElement)
+    wrapper.appendChild(labelElement)
 
     this.inputElement = inputElement
     this.element = wrapper
