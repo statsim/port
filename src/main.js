@@ -471,15 +471,15 @@ class Port {
         break
       case 'svg':
         // Append svg element
-        let svgContainer = document.createElement('div')
-        svgContainer.innerHTML = value
+        const svgContainer = document.createElement('div')
+        svgContainer.innerHTML = value.content || value
         this.outputsContainer.appendChild(svgContainer)
 
         // Append download button
         let svgBlob = new Blob([value.content || value], {type: 'text/plain;charset=utf-8'})
         let svgDownloadButton = document.createElement('a')
         svgDownloadButton.className = 'waves-effect waves-light btn'
-        svgDownloadButton.innerText = 'Download' + value.filename || ''
+        svgDownloadButton.innerText = 'Download ' + value.filename || ''
         svgDownloadButton.onclick = () => {
           FileSaver.saveAs(svgBlob, value.filename || 'output.svg')
         }
